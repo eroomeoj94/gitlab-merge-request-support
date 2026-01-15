@@ -21,6 +21,7 @@ export type GitLabMergeRequest = {
     readonly id: number;
     readonly username: string;
     readonly name: string;
+    readonly avatar_url?: string;
   };
   readonly created_at: string;
   readonly merged_at: string | null;
@@ -28,6 +29,14 @@ export type GitLabMergeRequest = {
   readonly state: string;
   readonly additions?: number;
   readonly deletions?: number;
+  readonly user_notes_count?: number;
+  readonly upvotes?: number;
+  readonly downvotes?: number;
+  readonly references?: {
+    readonly short?: string;
+    readonly relative?: string;
+    readonly full?: string;
+  };
 };
 
 export type GitLabMRChange = {

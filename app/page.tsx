@@ -32,6 +32,11 @@ export default function Home() {
               Generate Report
             </Button>
           </Link>
+          <Link href="/search" style={{ textDecoration: 'none' }}>
+            <Button variant="outlined" size="large" sx={{ minWidth: 158 }} fullWidth>
+              Search MRs
+            </Button>
+          </Link>
         </Stack>
       </Stack>
     </Container>

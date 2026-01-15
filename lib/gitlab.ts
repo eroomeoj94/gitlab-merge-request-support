@@ -223,3 +223,49 @@ export async function searchUsers(
   });
   return data;
 }
+
+export async function searchMergeRequests(
+  authorUsernames: string[],
+  state: 'opened' | 'merged' | 'closed',
+  token: string,
+  perPage = 50,
+): Promise<GitLabMergeRequest[]> {
+  if (authorUsernames.length === 0) {
+    return [];
+  }
+
+  const allMRs: GitLabMergeRequest[] = [];
+  const seen = new Set<string>();
+
+  // GitLab API only accepts one author_username at a time, so we need to query each separately
+  for (const username of authorUsernames) {
+    const query: Record<string, string> = {
+      state,
+      scope: 'all',
+      author_username: username,
+      per_page: perPage.toString(),
+      order_by: 'updated_at',
+      sort: 'desc',
+    };
+
+    const mrs = await paginate<GitLabMergeRequest>('/merge_requests', token, query);
+
+    // Deduplicate by project_id and iid
+    for (const mr of mrs) {
+      const key = `${mr.project_id}:${mr.iid}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        allMRs.push(mr);
+      }
+    }
+  }
+
+  // Sort by updated_at descending
+  allMRs.sort((a, b) => {
+    const dateA = new Date(a.updated_at).getTime();
+    const dateB = new Date(b.updated_at).getTime();
+    return dateB - dateA;
+  });
+
+  return allMRs;
+}
