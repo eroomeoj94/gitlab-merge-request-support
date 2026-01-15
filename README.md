@@ -16,9 +16,31 @@ A Next.js application that analyzes merge request sizes and generates reports fo
 ### Prerequisites
 
 - Node.js 18+ and npm
-- A GitLab.com Personal Access Token with the following scopes:
+- A GitLab Personal Access Token with the following scopes:
   - `read_api` - Required to read merge requests and project data
   - `read_user` - Required to validate token and fetch user info
+
+#### Creating a GitLab Personal Access Token
+
+1. **For GitLab.com:**
+   - Go to [https://gitlab.com/-/user_settings/personal_access_tokens](https://gitlab.com/-/user_settings/personal_access_tokens)
+   - Or navigate: Profile → Preferences → Access Tokens
+
+2. **For Self-Hosted GitLab:**
+   - Go to your GitLab instance → User Settings → Access Tokens
+   - Or navigate: Profile → Preferences → Access Tokens
+
+3. **Create a new token:**
+   - Enter a descriptive **Token name** (e.g., "MR Size Scoring Tool")
+   - Set an **Expiration date** (optional, recommended for security)
+   - Select the following **scopes**:
+     - ✅ `read_api` - Read merge requests and project data
+     - ✅ `read_user` - Read user information
+   - Click **Create personal access token**
+
+4. **Copy the token immediately** - it will only be shown once! If you lose it, you'll need to create a new one.
+
+5. The token will look like: `glpat-xxxxxxxxxxxxxxxxxxxx` (for GitLab.com) or similar format for self-hosted instances.
 
 ### Installation
 
@@ -61,11 +83,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### 1. Save Your GitLab Token
 
-1. Navigate to `/token`
-2. Enter your GitLab Personal Access Token
+1. Navigate to `/token` in the application
+2. Enter your GitLab Personal Access Token (the one you created above)
 3. Click "Save Token"
 
 Your token is validated against GitLab's API and stored securely server-side. It will expire after the configured TTL (default: 7 days).
+
+**Note:** If you're using a self-hosted GitLab instance, make sure to set the `GITLAB_BASE_URL` environment variable to your instance's API endpoint (e.g., `https://gitlab.yourcompany.com/api/v4`).
 
 ### 2. Generate a Report
 

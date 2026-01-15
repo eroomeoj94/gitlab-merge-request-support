@@ -1,8 +1,8 @@
 import type {
-  GitLabUser,
-  GitLabProject,
-  GitLabMergeRequest,
   GitLabMRChangesResponse,
+  GitLabMergeRequest,
+  GitLabProject,
+  GitLabUser,
 } from '@/types/gitlab';
 
 const GITLAB_BASE_URL = process.env.GITLAB_BASE_URL ?? 'https://gitlab.com/api/v4';
@@ -12,7 +12,11 @@ async function gitlabFetch<T>(
   token: string,
   query?: Record<string, string>,
 ): Promise<{ data: T; headers: Headers }> {
-  const url = new URL(path, GITLAB_BASE_URL);
+  // Ensure base URL ends with / and path doesn't start with /
+  const baseUrl = GITLAB_BASE_URL.endsWith('/') ? GITLAB_BASE_URL : `${GITLAB_BASE_URL}/`;
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  const url = new URL(cleanPath, baseUrl);
+  
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
       url.searchParams.append(key, value);
@@ -22,6 +26,7 @@ async function gitlabFetch<T>(
   const response = await fetch(url.toString(), {
     headers: {
       'PRIVATE-TOKEN': token,
+      Accept: 'application/json',
     },
   });
 
@@ -38,22 +43,56 @@ async function gitlabFetch<T>(
     throw new Error(`GitLab API error: ${response.status} ${response.statusText}`);
   }
 
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await response.text();
-    throw new Error(
-      `GitLab API returned non-JSON response: ${response.status} ${response.statusText}`,
-    );
-  }
+  // GitLab REST API returns JSON responses, but content-type may include charset
+  // or be missing in some cases. We'll try to parse as JSON regardless.
+  const contentType = response.headers.get('content-type') ?? '';
+  const isLikelyJson =
+    contentType.includes('application/json') ||
+    contentType === '' ||
+    contentType.startsWith('text/');
 
   let data: T;
   try {
-    data = (await response.json()) as T;
-  } catch (parseError) {
-    if (parseError instanceof SyntaxError) {
-      throw new Error('GitLab API returned invalid JSON response');
+    const text = await response.text();
+
+    if (text.trim().length === 0) {
+      throw new Error('GitLab API returned empty response');
     }
-    throw parseError;
+
+    // Check if response is HTML (common when redirected to login or error page)
+    if (text.trimStart().startsWith('<!DOCTYPE') || text.trimStart().startsWith('<html')) {
+      // Extract a snippet for debugging (first 200 chars)
+      const snippet = text.substring(0, 200).replace(/\s+/g, ' ');
+      throw new Error(
+        `GitLab API returned HTML instead of JSON. This usually indicates an authentication issue, incorrect endpoint, or the API base URL is wrong. Response snippet: ${snippet}...`,
+      );
+    }
+
+    // Try to parse as JSON - GitLab API should always return JSON per documentation
+    try {
+      data = JSON.parse(text) as T;
+    } catch (jsonError) {
+      // If content-type explicitly indicates non-JSON, provide better error
+      if (
+        !isLikelyJson &&
+        contentType &&
+        !contentType.includes('application/json')
+      ) {
+        throw new Error(
+          `GitLab API returned non-JSON response: ${response.status} ${response.statusText}. Content-Type: ${contentType}`,
+        );
+      }
+      // Otherwise, it's a JSON parsing error - show first part of response for debugging
+      const snippet = text.substring(0, 200).replace(/\s+/g, ' ');
+      throw new Error(
+        `GitLab API returned invalid JSON response. Response snippet: ${snippet}...`,
+      );
+    }
+  } catch (parseError) {
+    if (parseError instanceof Error) {
+      throw parseError;
+    }
+    throw new Error('Failed to parse GitLab API response');
   }
 
   return { data, headers: response.headers };

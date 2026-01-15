@@ -1,32 +1,37 @@
 import Link from 'next/link';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
+    <Container maxWidth="md" sx={{ py: 8 }}>
+      <Stack spacing={4} alignItems={{ xs: 'center', sm: 'flex-start' }}>
+        <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+          <Typography variant="h3" component="h1" gutterBottom>
             GitLab MR Size Scoring
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Analyze merge request sizes and generate reports for specific authors within GitLab projects or groups.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <Link
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="/token"
-          >
-            Manage Token
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 500 }}>
+            Analyze merge request sizes and generate reports for specific authors within
+            GitLab projects or groups.
+          </Typography>
+        </Box>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Link href="/token" style={{ textDecoration: 'none' }}>
+            <Button variant="contained" size="large" sx={{ minWidth: 158 }} fullWidth>
+              Manage Token
+            </Button>
           </Link>
-          <Link
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="/report"
-          >
-            Generate Report
+          <Link href="/report" style={{ textDecoration: 'none' }}>
+            <Button variant="outlined" size="large" sx={{ minWidth: 158 }} fullWidth>
+              Generate Report
+            </Button>
           </Link>
-        </div>
-      </main>
-    </div>
+        </Stack>
+      </Stack>
+    </Container>
   );
 }

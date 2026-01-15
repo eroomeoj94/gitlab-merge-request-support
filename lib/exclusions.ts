@@ -25,7 +25,7 @@ export function isExcluded(filePath: string): boolean {
   return EXCLUSION_PATTERNS.some((pattern) => minimatch(filePath, pattern));
 }
 
-export function filterChanges(changes: GitLabMRChange[]): GitLabMRChange[] {
+export function filterChanges(changes: readonly GitLabMRChange[]): GitLabMRChange[] {
   return changes.filter((change) => {
     const path = change.new_path || change.old_path;
     return path && !isExcluded(path);

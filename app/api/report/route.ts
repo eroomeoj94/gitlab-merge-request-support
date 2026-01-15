@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionId } from '@/lib/session';
 import { getToken } from '@/lib/token-store';
+import { getSessionId } from '@/lib/session';
 import {
   getGroupProjects,
   getMergedMRs,
@@ -8,9 +8,9 @@ import {
   getMRDetails,
 } from '@/lib/gitlab';
 import { computeMetrics, computeScore, getSizeBand } from '@/lib/scoring';
-import { median, average, promisePool, groupByAuthor } from '@/lib/stats';
-import type { ReportRequest, ReportResponse } from '@/types/report';
+import { average, groupByAuthor, median, promisePool } from '@/lib/stats';
 import type { GitLabMergeRequest } from '@/types/gitlab';
+import type { ReportRequest, ReportResponse } from '@/types/report';
 
 export const runtime = 'nodejs';
 

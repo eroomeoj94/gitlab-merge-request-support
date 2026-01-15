@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { deleteToken, storeToken } from '@/lib/token-store';
 import { getOrCreateSessionId } from '@/lib/session';
-import { storeToken, deleteToken } from '@/lib/token-store';
 import { validateToken } from '@/lib/gitlab';
-import type { SaveTokenRequest, SaveTokenResponse, DeleteTokenResponse } from '@/types/report';
+import type { DeleteTokenResponse, SaveTokenRequest, SaveTokenResponse } from '@/types/report';
 
 export const runtime = 'nodejs';
 

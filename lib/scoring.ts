@@ -1,8 +1,8 @@
-import type { MRMetrics } from '@/types/report';
-import type { GitLabMRChange } from '@/types/gitlab';
 import { filterChanges } from './exclusions';
+import type { GitLabMRChange } from '@/types/gitlab';
+import type { MRMetrics } from '@/types/report';
 
-export function computeMetrics(changes: GitLabMRChange[]): MRMetrics {
+export function computeMetrics(changes: readonly GitLabMRChange[]): MRMetrics {
   const filtered = filterChanges(changes);
   const files = new Set<string>();
   const dirs = new Set<string>();
