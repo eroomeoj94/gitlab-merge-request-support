@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteToken, storeToken } from '@/lib/token-store';
+import { tokenStore } from '@/lib/token-store';
 import { getOrCreateSessionId } from '@/lib/session';
 import { validateToken } from '@/lib/gitlab';
 import type { DeleteTokenResponse, SaveTokenRequest, SaveTokenResponse } from '@/types/report';
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SaveToken
     const user = await validateToken(body.token);
 
     try {
-      storeToken(sessionId, body.token);
+      await tokenStore.store(sessionId, body.token);
     } catch (storeError) {
       if (storeError instanceof Error) {
         if (storeError.message.includes('TOKEN_ENC_KEY_BASE64')) {
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SaveToken
 export async function DELETE(): Promise<NextResponse<DeleteTokenResponse>> {
   try {
     const sessionId = await getOrCreateSessionId();
-    deleteToken(sessionId);
+    await tokenStore.delete(sessionId);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

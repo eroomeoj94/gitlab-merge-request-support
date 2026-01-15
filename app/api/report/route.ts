@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from '@/lib/token-store';
+import { tokenStore } from '@/lib/token-store';
 import { getOrCreateSessionId } from '@/lib/session';
 import {
   getMergedMRs,
@@ -70,7 +70,7 @@ export async function POST(
   try {
     const sessionId = await getOrCreateSessionId();
 
-    const token = getToken(sessionId);
+    const token = await tokenStore.get(sessionId);
     if (!token) {
       return NextResponse.json({ error: 'No token found. Please save a token first.' }, { status: 401 });
     }
