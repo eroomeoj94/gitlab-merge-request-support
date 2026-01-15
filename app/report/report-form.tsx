@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Avatar from '@mui/material/Avatar';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Paper from '@mui/material/Paper';
@@ -23,6 +25,7 @@ type UserOption = {
   id: number;
   username: string;
   name: string;
+  avatarUrl?: string;
 };
 
 type ReportFormProps = {
@@ -216,16 +219,43 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
                 }
               />
             )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option.id}
+                  label={option.name}
+                  avatar={
+                    option.avatarUrl ? (
+                      <Avatar src={option.avatarUrl} alt={option.name} sx={{ width: 24, height: 24 }} />
+                    ) : (
+                      <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
+                        {option.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                    )
+                  }
+                />
+              ))
+            }
             renderOption={(props, option) => (
               <Box component="li" {...props} key={option.id}>
-                <Box>
-                  <Box component="div" sx={{ fontWeight: 'medium' }}>
-                    {option.name}
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: '100%' }}>
+                  {option.avatarUrl ? (
+                    <Avatar src={option.avatarUrl} alt={option.name} sx={{ width: 32, height: 32 }} />
+                  ) : (
+                    <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: 'primary.main' }}>
+                      {option.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                  )}
+                  <Box sx={{ flex: 1 }}>
+                    <Box component="div" sx={{ fontWeight: 'medium' }}>
+                      {option.name}
+                    </Box>
+                    <Box component="div" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                      @{option.username}
+                    </Box>
                   </Box>
-                  <Box component="div" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-                    @{option.username}
-                  </Box>
-                </Box>
+                </Stack>
               </Box>
             )}
             isOptionEqualToValue={(option, value) => option.id === value.id}

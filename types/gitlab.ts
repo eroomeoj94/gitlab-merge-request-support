@@ -3,6 +3,7 @@ export type GitLabUser = {
   readonly username: string;
   readonly name: string;
   readonly email: string;
+  readonly avatar_url?: string;
 };
 
 export type GitLabProject = {

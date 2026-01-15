@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
-): Promise<NextResponse<{ users: Array<{ id: number; username: string; name: string }> } | { error: string }>> {
+): Promise<NextResponse<{ users: Array<{ id: number; username: string; name: string; avatarUrl?: string }> } | { error: string }>> {
   try {
     const sessionId = await getOrCreateSessionId();
 
@@ -30,6 +30,7 @@ export async function GET(
         id: u.id,
         username: u.username,
         name: u.name,
+        avatarUrl: u.avatar_url,
       })),
     });
   } catch (error) {
