@@ -32,6 +32,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           helperText="Select one or more users to search for their merge requests"
           disabled={isLoading}
           showErrorAlert={true}
+          showAvatars={true}
         />
       </Stack>
     </Paper>
