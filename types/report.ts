@@ -9,7 +9,7 @@ export type SaveTokenResponse =
 export type DeleteTokenResponse = { ok: true };
 
 export type ReportRequest = {
-  projectIds: number[];
+  projectIds?: number[];
   dateRange: { from: string; to: string };
   authors: { usernames: string[] };
   filters?: { excludeDrafts?: boolean };
@@ -24,6 +24,8 @@ export type ReportResponse = {
   totals: {
     mergedMrCount: number;
     totalLinesChanged: number;
+    totalCommits: number;
+    avgCommits: number;
     avgScore: number;
     medianScore: number;
     avgDaysOpen: number;
@@ -34,6 +36,8 @@ export type ReportResponse = {
     name: string;
     mergedMrCount: number;
     totalLinesChanged: number;
+    totalCommits: number;
+    avgCommits: number;
     avgScore: number;
     medianScore: number;
     avgDaysOpen: number;
@@ -48,6 +52,7 @@ export type ReportResponse = {
     author: { username: string; name: string };
     mergedAt: string;
     daysOpen: number;
+    commitCount: number;
     metrics: {
       additions: number;
       deletions: number;

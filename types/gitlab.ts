@@ -51,3 +51,17 @@ export type GitLabMRChange = {
 export type GitLabMRChangesResponse = {
   readonly changes: readonly GitLabMRChange[];
 };
+
+export type GitLabCommit = {
+  readonly id: string;
+  readonly short_id: string;
+  readonly title: string;
+  readonly message: string;
+  readonly author_name: string;
+  readonly author_email: string;
+  readonly authored_date: string;
+  readonly committer_name: string;
+  readonly committer_email: string;
+  readonly committed_date: string;
+  readonly created_at: string;
+};

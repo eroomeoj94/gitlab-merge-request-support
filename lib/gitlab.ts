@@ -1,4 +1,5 @@
 import type {
+  GitLabCommit,
   GitLabMRChangesResponse,
   GitLabMergeRequest,
   GitLabProject,
@@ -189,6 +190,17 @@ export async function getMRDetails(
     token,
   );
   return data;
+}
+
+export async function getMRCommits(
+  projectId: number,
+  iid: number,
+  token: string,
+): Promise<GitLabCommit[]> {
+  return paginate<GitLabCommit>(
+    `/projects/${projectId}/merge_requests/${iid}/commits`,
+    token,
+  );
 }
 
 export async function getMyProjects(

@@ -17,7 +17,7 @@ export default function ReportSummary({ totals }: ReportSummaryProps) {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(7, 1fr)' },
           gap: 2,
         }}
       >
@@ -35,6 +35,22 @@ export default function ReportSummary({ totals }: ReportSummaryProps) {
           </Typography>
           <Typography variant="h4" component="div">
             {totals.totalLinesChanged.toLocaleString()}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="body2" color="text.secondary">
+            Total Commits
+          </Typography>
+          <Typography variant="h4" component="div">
+            {totals.totalCommits.toLocaleString()}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="body2" color="text.secondary">
+            Avg Commits
+          </Typography>
+          <Typography variant="h4" component="div">
+            {Math.round(totals.avgCommits)}
           </Typography>
         </Box>
         <Box>

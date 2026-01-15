@@ -4,7 +4,9 @@ import { getOrCreateSessionId } from '@/lib/session';
 import {
   getMergedMRs,
   getMRChanges,
+  getMRCommits,
   getMRDetails,
+  searchMergeRequests,
 } from '@/lib/gitlab';
 import { computeMetrics, computeScore, getSizeBand } from '@/lib/scoring';
 import { average, groupByAuthor, median, promisePool } from '@/lib/stats';
@@ -45,6 +47,14 @@ async function fetchMRWithMetrics(
     }
   }
 
+  let commitCount = 0;
+  try {
+    const commits = await getMRCommits(mr.project_id, mr.iid, token);
+    commitCount = commits.length;
+  } catch {
+    commitCount = 0;
+  }
+
   const score = computeScore(metrics);
   const sizeBand = getSizeBand(score);
 
@@ -65,6 +75,7 @@ async function fetchMRWithMetrics(
     },
     mergedAt: mr.merged_at ?? mr.updated_at,
     daysOpen,
+    commitCount,
     metrics,
     score,
     sizeBand,
@@ -84,13 +95,6 @@ export async function POST(
 
     const body = (await request.json()) as ReportRequest;
 
-    if (!body.projectIds || body.projectIds.length === 0) {
-      return NextResponse.json(
-        { error: 'projectIds must be non-empty' },
-        { status: 400 },
-      );
-    }
-
     if (!body.authors?.usernames || body.authors.usernames.length === 0) {
       return NextResponse.json(
         { error: 'authors.usernames must be non-empty' },
@@ -107,31 +111,53 @@ export async function POST(
 
     const excludeDrafts = body.filters?.excludeDrafts !== false;
 
-    const projectIds = body.projectIds;
-
     const allMRs: GitLabMergeRequest[] = [];
 
-    for (const projectId of projectIds) {
-      for (const username of body.authors.usernames) {
-        const mrs = await getMergedMRs(projectId, username, body.dateRange, token);
+    if (body.projectIds && body.projectIds.length > 0) {
+      // Use specific projects
+      for (const projectId of body.projectIds) {
+        for (const username of body.authors.usernames) {
+          const mrs = await getMergedMRs(projectId, username, body.dateRange, token);
 
-        for (const mr of mrs) {
-          if (!mr.merged_at) continue;
+          for (const mr of mrs) {
+            if (!mr.merged_at) continue;
 
-          const mergedDate = new Date(mr.merged_at);
-          const fromDate = new Date(body.dateRange.from);
-          const toDate = new Date(body.dateRange.to);
+            const mergedDate = new Date(mr.merged_at);
+            const fromDate = new Date(body.dateRange.from);
+            const toDate = new Date(body.dateRange.to);
 
-          if (mergedDate < fromDate || mergedDate > toDate) {
-            continue;
+            if (mergedDate < fromDate || mergedDate > toDate) {
+              continue;
+            }
+
+            if (excludeDrafts && isDraft(mr.title)) {
+              continue;
+            }
+
+            allMRs.push(mr);
           }
-
-          if (excludeDrafts && isDraft(mr.title)) {
-            continue;
-          }
-
-          allMRs.push(mr);
         }
+      }
+    } else {
+      // Search across all accessible projects
+      const mrs = await searchMergeRequests(body.authors.usernames, 'merged', token);
+
+      for (const mr of mrs) {
+        if (!mr.merged_at) continue;
+
+        const mergedDate = new Date(mr.merged_at);
+        const fromDate = new Date(body.dateRange.from);
+        const toDate = new Date(body.dateRange.to);
+
+        if (mergedDate < fromDate || mergedDate > toDate) {
+          continue;
+        }
+
+        if (excludeDrafts && isDraft(mr.title)) {
+          continue;
+        }
+
+        allMRs.push(mr);
       }
     }
 
@@ -164,10 +190,13 @@ export async function POST(
     const scores = mrDetails.map((mr) => mr.score);
     const linesChanged = mrDetails.map((mr) => mr.metrics.linesChanged);
     const daysOpen = mrDetails.map((mr) => mr.daysOpen);
+    const commits = mrDetails.map((mr) => mr.commitCount);
 
     const totals = {
       mergedMrCount: mrDetails.length,
       totalLinesChanged: linesChanged.reduce((sum, n) => sum + n, 0),
+      totalCommits: commits.reduce((sum, n) => sum + n, 0),
+      avgCommits: average(commits),
       avgScore: average(scores),
       medianScore: median(scores),
       avgDaysOpen: average(daysOpen),
@@ -181,6 +210,7 @@ export async function POST(
       const authorScores = authorMRs.map((mr) => mr.score);
       const authorLines = authorMRs.map((mr) => mr.metrics.linesChanged);
       const authorDaysOpen = authorMRs.map((mr) => mr.daysOpen);
+      const authorCommits = authorMRs.map((mr) => mr.commitCount);
 
       const largestMr = authorMRs.reduce(
         (max, mr) => (mr.score > (max?.score ?? -1) ? mr : max),
@@ -194,6 +224,8 @@ export async function POST(
         name: authorName,
         mergedMrCount: authorMRs.length,
         totalLinesChanged: authorLines.reduce((sum, n) => sum + n, 0),
+        totalCommits: authorCommits.reduce((sum, n) => sum + n, 0),
+        avgCommits: average(authorCommits),
         avgScore: average(authorScores),
         medianScore: median(authorScores),
         avgDaysOpen: average(authorDaysOpen),
@@ -207,7 +239,7 @@ export async function POST(
 
     const response: ReportResponse = {
       generatedAt: new Date().toISOString(),
-      projectIds: body.projectIds,
+      projectIds: body.projectIds ?? [],
       dateRange: body.dateRange,
       authors: body.authors.usernames,
       totals,

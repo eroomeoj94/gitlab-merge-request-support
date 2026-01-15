@@ -27,6 +27,8 @@ export default function ReportByAuthorTable({ byAuthor }: ReportByAuthorTablePro
               <TableCell>Author</TableCell>
               <TableCell align="right">MRs</TableCell>
               <TableCell align="right">Lines Changed</TableCell>
+              <TableCell align="right">Commits</TableCell>
+              <TableCell align="right">Avg Commits</TableCell>
               <TableCell align="right">Avg Score</TableCell>
               <TableCell align="right">Median Score</TableCell>
               <TableCell align="right">Avg Days Open</TableCell>
@@ -48,6 +50,10 @@ export default function ReportByAuthorTable({ byAuthor }: ReportByAuthorTablePro
                 <TableCell align="right">
                   {author.totalLinesChanged.toLocaleString()}
                 </TableCell>
+                <TableCell align="right">
+                  {author.totalCommits.toLocaleString()}
+                </TableCell>
+                <TableCell align="right">{Math.round(author.avgCommits)}</TableCell>
                 <TableCell align="right">{Math.round(author.avgScore)}</TableCell>
                 <TableCell align="right">{Math.round(author.medianScore)}</TableCell>
                 <TableCell align="right">

@@ -31,14 +31,18 @@ type ReportFormProps = {
 };
 
 export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
+  const today = new Date();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<ProjectOption[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<UserOption[]>([]);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(thirtyDaysAgo.toISOString().split('T')[0] ?? '');
+  const [dateTo, setDateTo] = useState(today.toISOString().split('T')[0] ?? '');
   const [excludeDrafts, setExcludeDrafts] = useState(true);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -112,10 +116,6 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (selectedProjects.length === 0) {
-      return;
-    }
-
     if (selectedUsers.length === 0) {
       return;
     }
@@ -125,7 +125,7 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
     }
 
     const request: ReportRequest = {
-      projectIds: selectedProjects.map((p) => p.id),
+      ...(selectedProjects.length > 0 && { projectIds: selectedProjects.map((p) => p.id) }),
       dateRange: {
         from: dateFrom,
         to: dateTo,
@@ -174,14 +174,8 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Projects (required, select at least one)"
-                placeholder="Type to search projects (minimum 2 characters)"
-                error={selectedProjects.length === 0 && projectSearchQuery.length > 0}
-                helperText={
-                  selectedProjects.length === 0 && projectSearchQuery.length > 0
-                    ? 'Please select at least one project'
-                    : ''
-                }
+                label="Projects (optional)"
+                placeholder="Type to search projects (minimum 2 characters). Leave empty to search all projects."
               />
             )}
             renderOption={(props, option) => (
@@ -273,7 +267,7 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
           <Button
             type="submit"
             variant="contained"
-            disabled={isLoading || selectedProjects.length === 0 || selectedUsers.length === 0}
+            disabled={isLoading || selectedUsers.length === 0}
             fullWidth
             aria-label={isLoading ? 'Generating report, please wait' : 'Generate report'}
           >
