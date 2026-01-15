@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from '@/lib/token-store';
-import { getSessionId } from '@/lib/session';
+import { getOrCreateSessionId } from '@/lib/session';
 import {
-  getGroupProjects,
   getMergedMRs,
   getMRChanges,
   getMRDetails,
@@ -69,10 +68,7 @@ export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<ReportResponse | { error: string }>> {
   try {
-    const sessionId = await getSessionId();
-    if (!sessionId) {
-      return NextResponse.json({ error: 'No session found' }, { status: 401 });
-    }
+    const sessionId = await getOrCreateSessionId();
 
     const token = getToken(sessionId);
     if (!token) {
@@ -80,6 +76,13 @@ export async function POST(
     }
 
     const body = (await request.json()) as ReportRequest;
+
+    if (!body.projectIds || body.projectIds.length === 0) {
+      return NextResponse.json(
+        { error: 'projectIds must be non-empty' },
+        { status: 400 },
+      );
+    }
 
     if (!body.authors?.usernames || body.authors.usernames.length === 0) {
       return NextResponse.json(
@@ -97,14 +100,7 @@ export async function POST(
 
     const excludeDrafts = body.filters?.excludeDrafts !== false;
 
-    let projectIds: number[];
-
-    if (body.scope.type === 'group') {
-      const projects = await getGroupProjects(body.scope.id, token);
-      projectIds = projects.map((p) => p.id);
-    } else {
-      projectIds = [body.scope.id];
-    }
+    const projectIds = body.projectIds;
 
     const allMRs: GitLabMergeRequest[] = [];
 
@@ -200,7 +196,7 @@ export async function POST(
 
     const response: ReportResponse = {
       generatedAt: new Date().toISOString(),
-      scope: body.scope,
+      projectIds: body.projectIds,
       dateRange: body.dateRange,
       authors: body.authors.usernames,
       totals,

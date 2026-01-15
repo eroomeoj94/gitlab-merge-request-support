@@ -72,6 +72,12 @@ export function storeToken(sessionId: string, token: string): void {
   const expiresAt = Date.now() + TOKEN_TTL_MS;
 
   tokenCache.set(sessionId, { encryptedToken, expiresAt });
+  
+  // Verify storage immediately
+  const stored = tokenCache.get(sessionId);
+  if (!stored) {
+    throw new Error('Failed to store token: token was not found in cache after storage');
+  }
 }
 
 export function getToken(sessionId: string): string | null {

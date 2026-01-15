@@ -190,3 +190,36 @@ export async function getMRDetails(
   );
   return data;
 }
+
+export async function getMyProjects(
+  token: string,
+  search?: string,
+): Promise<GitLabProject[]> {
+  const query: Record<string, string> = {
+    membership: 'true',
+    simple: 'true',
+    order_by: 'name',
+    sort: 'asc',
+    per_page: '20',
+    page: '1',
+  };
+
+  if (search && search.trim().length > 0) {
+    query.search = search.trim();
+  }
+
+  const { data } = await gitlabFetch<GitLabProject[]>('/projects', token, query);
+  return data;
+}
+
+export async function searchUsers(
+  query: string,
+  token: string,
+): Promise<GitLabUser[]> {
+  const { data } = await gitlabFetch<GitLabUser[]>('/users', token, {
+    search: query,
+    per_page: '20',
+    page: '1',
+  });
+  return data;
+}

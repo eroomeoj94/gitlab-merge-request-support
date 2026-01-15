@@ -9,7 +9,7 @@ export type SaveTokenResponse =
 export type DeleteTokenResponse = { ok: true };
 
 export type ReportRequest = {
-  scope: { type: 'project' | 'group'; id: number };
+  projectIds: number[];
   dateRange: { from: string; to: string };
   authors: { usernames: string[] };
   filters?: { excludeDrafts?: boolean };
@@ -17,7 +17,7 @@ export type ReportRequest = {
 
 export type ReportResponse = {
   generatedAt: string;
-  scope: { type: 'project' | 'group'; id: number };
+  projectIds: number[];
   dateRange: { from: string; to: string };
   authors: string[];
 

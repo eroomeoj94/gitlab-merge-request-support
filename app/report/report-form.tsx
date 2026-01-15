@@ -1,18 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
-import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import FormLabel from '@mui/material/FormLabel';
 import Paper from '@mui/material/Paper';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
 import type { ReportRequest } from '@/types/report';
+
+type ProjectOption = {
+  id: number;
+  name: string;
+  pathWithNamespace: string;
+};
+
+type UserOption = {
+  id: number;
+  username: string;
+  name: string;
+};
 
 type ReportFormProps = {
   readonly onSubmit: (request: ReportRequest) => Promise<void>;
@@ -20,27 +31,92 @@ type ReportFormProps = {
 };
 
 export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
-  const [scopeType, setScopeType] = useState<'project' | 'group'>('project');
-  const [scopeId, setScopeId] = useState('');
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<ProjectOption[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserOption[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [authors, setAuthors] = useState('');
   const [excludeDrafts, setExcludeDrafts] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (projectSearchQuery.trim().length < 2) {
+      setProjectOptions([]);
+      setProjectsLoading(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        setProjectsLoading(true);
+        setProjectsError(null);
+        const response = await fetch(`/api/projects?search=${encodeURIComponent(projectSearchQuery.trim())}`);
+        if (!response.ok) {
+          const errorData = (await response.json()) as { error?: string };
+          const errorMessage = errorData.error ?? `Failed to search projects: ${response.status} ${response.statusText}`;
+          setProjectsError(errorMessage);
+          setProjectOptions([]);
+          return;
+        }
+        const data = (await response.json()) as { projects: ProjectOption[] };
+        setProjectOptions(data.projects);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to search projects';
+        setProjectsError(errorMessage);
+        setProjectOptions([]);
+        console.error('Error searching projects:', error);
+      } finally {
+        setProjectsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [projectSearchQuery]);
+
+  useEffect(() => {
+    if (userSearchQuery.trim().length < 2) {
+      setUserOptions([]);
+      setUsersLoading(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        setUsersLoading(true);
+        const response = await fetch(`/api/users?search=${encodeURIComponent(userSearchQuery.trim())}`);
+        if (!response.ok) {
+          throw new Error('Failed to search users');
+        }
+        const data = (await response.json()) as { users: UserOption[] };
+        setUserOptions(data.users);
+      } catch (error) {
+        console.error('Error searching users:', error);
+        setUserOptions([]);
+      } finally {
+        setUsersLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [userSearchQuery]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const usernames = authors
-      .split(/[,\n]/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-
-    if (usernames.length === 0) {
+    if (selectedProjects.length === 0) {
       return;
     }
 
-    const parsedScopeId = parseInt(scopeId, 10);
-    if (!scopeId || isNaN(parsedScopeId)) {
+    if (selectedUsers.length === 0) {
       return;
     }
 
@@ -49,16 +125,13 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
     }
 
     const request: ReportRequest = {
-      scope: {
-        type: scopeType,
-        id: parsedScopeId,
-      },
+      projectIds: selectedProjects.map((p) => p.id),
       dateRange: {
         from: dateFrom,
         to: dateTo,
       },
       authors: {
-        usernames,
+        usernames: selectedUsers.map((u) => u.username),
       },
       filters: {
         excludeDrafts,
@@ -70,27 +143,99 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
 
   return (
     <Paper sx={{ p: 3 }}>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <Stack spacing={3}>
-          <FormControl>
-            <FormLabel id="scope-type-label">Scope Type</FormLabel>
-            <RadioGroup
-              row
-              aria-labelledby="scope-type-label"
-              value={scopeType}
-              onChange={(e) => setScopeType(e.target.value as 'project' | 'group')}
-            >
-              <FormControlLabel value="project" control={<Radio />} label="Project" />
-              <FormControlLabel value="group" control={<Radio />} label="Group" />
-            </RadioGroup>
-          </FormControl>
+          {projectsError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Typography variant="body2" component="div">
+                <strong>Error loading projects:</strong> {projectsError}
+              </Typography>
+              {projectsError.includes('No token found') && (
+                <Typography variant="body2" component="div" sx={{ mt: 1 }}>
+                  Please save your GitLab token on the{' '}
+                  <a href="/token" style={{ textDecoration: 'underline' }}>
+                    token page
+                  </a>{' '}
+                  first.
+                </Typography>
+              )}
+            </Alert>
+          )}
+          <Autocomplete
+            multiple
+            options={projectOptions}
+            getOptionLabel={(option) => option.name}
+            value={selectedProjects}
+            onChange={(_, newValue) => setSelectedProjects(newValue)}
+            onInputChange={(_, newInputValue) => setProjectSearchQuery(newInputValue)}
+            loading={projectsLoading}
+            inputValue={projectSearchQuery}
+            filterOptions={(x) => x}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Projects (required, select at least one)"
+                placeholder="Type to search projects (minimum 2 characters)"
+                error={selectedProjects.length === 0 && projectSearchQuery.length > 0}
+                helperText={
+                  selectedProjects.length === 0 && projectSearchQuery.length > 0
+                    ? 'Please select at least one project'
+                    : ''
+                }
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.id}>
+                <Box>
+                  <Box component="div" sx={{ fontWeight: 'medium' }}>
+                    {option.name}
+                  </Box>
+                  <Box component="div" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                    {option.pathWithNamespace}
+                  </Box>
+                </Box>
+              </Box>
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            fullWidth
+          />
 
-          <TextField
-            label={scopeType === 'project' ? 'Project ID' : 'Group ID'}
-            type="number"
-            value={scopeId}
-            onChange={(e) => setScopeId(e.target.value)}
-            required
+          <Autocomplete
+            multiple
+            options={userOptions}
+            getOptionLabel={(option) => `${option.name} (@${option.username})`}
+            value={selectedUsers}
+            onChange={(_, newValue) => setSelectedUsers(newValue)}
+            onInputChange={(_, newInputValue) => setUserSearchQuery(newInputValue)}
+            loading={usersLoading}
+            inputValue={userSearchQuery}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Users (required, select at least one)"
+                placeholder="Type to search users (minimum 2 characters)"
+                error={selectedUsers.length === 0 && userSearchQuery.length > 0}
+                helperText={
+                  selectedUsers.length === 0 && userSearchQuery.length > 0
+                    ? 'Please select at least one user'
+                    : ''
+                }
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.id}>
+                <Box>
+                  <Box component="div" sx={{ fontWeight: 'medium' }}>
+                    {option.name}
+                  </Box>
+                  <Box component="div" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                    @{option.username}
+                  </Box>
+                </Box>
+              </Box>
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            filterOptions={(x) => x}
             fullWidth
           />
 
@@ -115,17 +260,6 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
             />
           </Box>
 
-          <TextField
-            label="Author Usernames (required, comma or newline separated)"
-            multiline
-            rows={4}
-            value={authors}
-            onChange={(e) => setAuthors(e.target.value)}
-            placeholder="username1, username2, username3"
-            required
-            fullWidth
-          />
-
           <FormControlLabel
             control={
               <Checkbox
@@ -139,7 +273,7 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
           <Button
             type="submit"
             variant="contained"
-            disabled={isLoading}
+            disabled={isLoading || selectedProjects.length === 0 || selectedUsers.length === 0}
             fullWidth
             aria-label={isLoading ? 'Generating report, please wait' : 'Generate report'}
           >
