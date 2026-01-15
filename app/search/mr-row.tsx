@@ -45,8 +45,27 @@ function getStateColor(state: SearchMergeRequest['state']): string {
   }
 }
 
-function getStateLabel(state: SearchMergeRequest['state'], updatedAt: string): string {
-  const timeAgo = formatRelativeTime(updatedAt);
+function getStateLabel(
+  state: SearchMergeRequest['state'],
+  createdAt: string,
+  updatedAt: string,
+  mergedAt: string | null,
+): string {
+  let dateToUse: string;
+  switch (state) {
+    case 'opened':
+      dateToUse = createdAt;
+      break;
+    case 'merged':
+      dateToUse = mergedAt ?? updatedAt;
+      break;
+    case 'closed':
+      dateToUse = updatedAt;
+      break;
+    default:
+      dateToUse = updatedAt;
+  }
+  const timeAgo = formatRelativeTime(dateToUse);
   switch (state) {
     case 'opened':
       return `opened ${timeAgo}`;
@@ -61,7 +80,10 @@ function getStateLabel(state: SearchMergeRequest['state'], updatedAt: string): s
 
 export default function MRRow({ mr }: MRRowProps) {
   const stateColor = useMemo(() => getStateColor(mr.state), [mr.state]);
-  const stateLabel = useMemo(() => getStateLabel(mr.state, mr.updatedAt), [mr.state, mr.updatedAt]);
+  const stateLabel = useMemo(
+    () => getStateLabel(mr.state, mr.createdAt, mr.updatedAt, mr.mergedAt),
+    [mr.state, mr.createdAt, mr.updatedAt, mr.mergedAt],
+  );
   const mrReference = `!${mr.iid}`;
 
   return (
