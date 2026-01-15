@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import type { ReportResponse } from '@/types/report';
+import { formatDuration } from '@/lib/format-duration';
 
 type ReportSummaryProps = {
   readonly totals: ReportResponse['totals'];
@@ -16,7 +17,7 @@ export default function ReportSummary({ totals }: ReportSummaryProps) {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
           gap: 2,
         }}
       >
@@ -50,6 +51,14 @@ export default function ReportSummary({ totals }: ReportSummaryProps) {
           </Typography>
           <Typography variant="h4" component="div">
             {Math.round(totals.medianScore)}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="body2" color="text.secondary">
+            Avg Days Open
+          </Typography>
+          <Typography variant="h4" component="div">
+            {formatDuration(totals.avgDaysOpen)}
           </Typography>
         </Box>
       </Box>

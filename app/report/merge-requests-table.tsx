@@ -8,6 +8,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import type { ReportResponse } from '@/types/report';
+import { formatDuration } from '@/lib/format-duration';
 import SizeBandChip from './size-band-chip';
 import SortControls, { type SortDirection, type SortField } from './sort-controls';
 
@@ -32,6 +33,8 @@ export default function MergeRequestsTable({
       comparison = new Date(a.mergedAt).getTime() - new Date(b.mergedAt).getTime();
     } else if (sortField === 'title') {
       comparison = a.title.localeCompare(b.title);
+    } else if (sortField === 'daysOpen') {
+      comparison = a.daysOpen - b.daysOpen;
     }
     return sortDirection === 'asc' ? comparison : -comparison;
   });
@@ -57,6 +60,7 @@ export default function MergeRequestsTable({
               <TableCell align="right">Lines</TableCell>
               <TableCell align="right">Files</TableCell>
               <TableCell align="right">Dirs</TableCell>
+              <TableCell align="right">Days Open</TableCell>
               <TableCell>Merged</TableCell>
             </TableRow>
           </TableHead>
@@ -85,6 +89,11 @@ export default function MergeRequestsTable({
                 </TableCell>
                 <TableCell align="right">{mr.metrics.filesChanged}</TableCell>
                 <TableCell align="right">{mr.metrics.dirsTouched}</TableCell>
+                <TableCell align="right">
+                  <Typography variant="body2">
+                    {formatDuration(mr.daysOpen)}
+                  </Typography>
+                </TableCell>
                 <TableCell>
                   <Typography variant="body2" color="text.secondary">
                     {new Date(mr.mergedAt).toLocaleDateString()}

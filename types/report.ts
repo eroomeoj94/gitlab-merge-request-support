@@ -26,6 +26,7 @@ export type ReportResponse = {
     totalLinesChanged: number;
     avgScore: number;
     medianScore: number;
+    avgDaysOpen: number;
   };
 
   byAuthor: Array<{
@@ -35,6 +36,7 @@ export type ReportResponse = {
     totalLinesChanged: number;
     avgScore: number;
     medianScore: number;
+    avgDaysOpen: number;
     largestMr: { title: string; webUrl: string; score: number } | null;
   }>;
 
@@ -45,6 +47,7 @@ export type ReportResponse = {
     webUrl: string;
     author: { username: string; name: string };
     mergedAt: string;
+    daysOpen: number;
     metrics: {
       additions: number;
       deletions: number;

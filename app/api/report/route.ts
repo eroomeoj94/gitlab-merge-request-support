@@ -48,6 +48,12 @@ async function fetchMRWithMetrics(
   const score = computeScore(metrics);
   const sizeBand = getSizeBand(score);
 
+  // Calculate days open (created_at to merged_at)
+  const daysOpen =
+    mr.created_at && mr.merged_at
+      ? (new Date(mr.merged_at).getTime() - new Date(mr.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      : 0;
+
   return {
     projectId: mr.project_id,
     iid: mr.iid,
@@ -58,6 +64,7 @@ async function fetchMRWithMetrics(
       name: mr.author.name,
     },
     mergedAt: mr.merged_at ?? mr.updated_at,
+    daysOpen,
     metrics,
     score,
     sizeBand,
@@ -156,12 +163,14 @@ export async function POST(
 
     const scores = mrDetails.map((mr) => mr.score);
     const linesChanged = mrDetails.map((mr) => mr.metrics.linesChanged);
+    const daysOpen = mrDetails.map((mr) => mr.daysOpen);
 
     const totals = {
       mergedMrCount: mrDetails.length,
       totalLinesChanged: linesChanged.reduce((sum, n) => sum + n, 0),
       avgScore: average(scores),
       medianScore: median(scores),
+      avgDaysOpen: average(daysOpen),
     };
 
     const byAuthorMap = groupByAuthor(mrDetails);
@@ -171,6 +180,7 @@ export async function POST(
       const authorMRs = mrs;
       const authorScores = authorMRs.map((mr) => mr.score);
       const authorLines = authorMRs.map((mr) => mr.metrics.linesChanged);
+      const authorDaysOpen = authorMRs.map((mr) => mr.daysOpen);
 
       const largestMr = authorMRs.reduce(
         (max, mr) => (mr.score > (max?.score ?? -1) ? mr : max),
@@ -186,6 +196,7 @@ export async function POST(
         totalLinesChanged: authorLines.reduce((sum, n) => sum + n, 0),
         avgScore: average(authorScores),
         medianScore: median(authorScores),
+        avgDaysOpen: average(authorDaysOpen),
         largestMr: largestMr
           ? { title: largestMr.title, webUrl: largestMr.webUrl, score: largestMr.score }
           : null,

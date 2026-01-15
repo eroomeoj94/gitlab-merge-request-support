@@ -8,6 +8,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import type { ReportResponse } from '@/types/report';
+import { formatDuration } from '@/lib/format-duration';
 
 type ReportByAuthorTableProps = {
   readonly byAuthor: ReportResponse['byAuthor'];
@@ -28,6 +29,7 @@ export default function ReportByAuthorTable({ byAuthor }: ReportByAuthorTablePro
               <TableCell align="right">Lines Changed</TableCell>
               <TableCell align="right">Avg Score</TableCell>
               <TableCell align="right">Median Score</TableCell>
+              <TableCell align="right">Avg Days Open</TableCell>
               <TableCell>Largest MR</TableCell>
             </TableRow>
           </TableHead>
@@ -48,6 +50,9 @@ export default function ReportByAuthorTable({ byAuthor }: ReportByAuthorTablePro
                 </TableCell>
                 <TableCell align="right">{Math.round(author.avgScore)}</TableCell>
                 <TableCell align="right">{Math.round(author.medianScore)}</TableCell>
+                <TableCell align="right">
+                  {formatDuration(author.avgDaysOpen)}
+                </TableCell>
                 <TableCell>
                   {author.largestMr ? (
                     <Link

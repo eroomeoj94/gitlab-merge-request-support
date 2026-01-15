@@ -22,6 +22,7 @@ export type GitLabMergeRequest = {
     readonly username: string;
     readonly name: string;
   };
+  readonly created_at: string;
   readonly merged_at: string | null;
   readonly updated_at: string;
   readonly state: string;

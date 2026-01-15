@@ -2,7 +2,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 
-export type SortField = 'score' | 'mergedAt' | 'title';
+export type SortField = 'score' | 'mergedAt' | 'title' | 'daysOpen';
 export type SortDirection = 'asc' | 'desc';
 
 type SortControlsProps = {
@@ -40,6 +40,14 @@ export default function SortControls({
           aria-label={`Sort by title ${sortField === 'title' ? `(${sortDirection})` : ''}`}
         >
           Sort by Title {sortField === 'title' && (sortDirection === 'asc' ? '↑' : '↓')}
+        </Button>
+        <Button
+          onClick={() => onSort('daysOpen')}
+          variant={sortField === 'daysOpen' ? 'contained' : 'outlined'}
+          aria-label={`Sort by days open ${sortField === 'daysOpen' ? `(${sortDirection})` : ''}`}
+        >
+          Sort by Days Open{' '}
+          {sortField === 'daysOpen' && (sortDirection === 'asc' ? '↑' : '↓')}
         </Button>
       </ButtonGroup>
     </Box>
