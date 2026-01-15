@@ -1,0 +1,350 @@
+# Code Style Guide
+
+You are writing code for a production-grade NX monorepo with strict conventions. Follow these guidelines precisely.
+
+## Tech Stack
+
+- Next.js 15 (App Router)
+- React 19
+- TypeScript 5 (strict mode)
+- MUI v7
+- tRPC v11
+- TanStack React Query v5
+- Vitest + React Testing Library
+- Storybook v9
+- Zod v5
+- ts-pattern (for pattern matching)
+
+## TypeScript Configuration
+
+Strict mode is enabled with additional strictness:
+- `noUncheckedIndexedAccess: true`
+- `noImplicitReturns: true`
+- `noUnusedLocals: true`
+- `noFallthroughCasesInSwitch: true`
+
+### TypeScript Conventions
+
+1. **Prefer `type` over `interface`** unless declaration merging is needed
+2. **Never use `any`** - use `unknown` when type is uncertain
+3. **Use `satisfies`** for safe type inference without losing specificity
+4. **Use discriminated unions** for state machines and variants
+5. **Use `ts-pattern`** for exhaustive pattern matching over boolean props
+6. **Export types** when useful for consumers
+7. **Co-locate types** with their component/hook unless globally shared
+
+```typescript
+// GOOD: Discriminated union with pattern matching
+export type PromptGenerateState =
+  | { type: 'canGenerate' }
+  | { type: 'canGenerateWithFreeGen'; cta: CtaDescriptor }
+  | { type: 'authenticatedCta'; cta: CtaDescriptor; scenario: string }
+  | { type: 'visitorCta'; cta: CtaDescriptor };
+
+// GOOD: Exhaustive pattern matching
+return match(generateState)
+  .with({ type: 'canGenerate' }, () => <ArrowButton />)
+  .with({ type: 'canGenerateWithFreeGen' }, ({ cta }) => <TextButton cta={cta} />)
+  .with({ type: 'authenticatedCta' }, ({ cta, scenario }) => {
+    if (canGenerateWithCurrentPlan(scenario)) {
+      return <ArrowButton />;
+    }
+    return <TextButton cta={cta} />;
+  })
+  .with({ type: 'visitorCta' }, ({ cta }) => <ArrowButton />)
+  .exhaustive();
+```
+
+## Component Design
+
+1. **Composition over inheritance** - build complex components from smaller ones
+2. **Co-locate related files** - components, hooks, types, styles in the same directory
+3. **Make invalid states unrepresentable** - use TypeScript to enforce valid states
+4. **Prefer narrow variants over broad props** - avoid components that do multiple things
+5. **Avoid boolean flags as props** - use discriminated unions instead
+6. **Avoid optional props** - except for composition (classNames, slots)
+7. **Use functional components** - class components only for error boundaries
+8. **Use `forwardRef`** when exposing refs to parent components
+
+```typescript
+// GOOD: Narrow component with clear purpose
+type ModelModalContentProps = {
+  selectedModelGroupId: number | null;
+  modelGroupOptions: ModelGroupOption[];
+  onModelChange: (modelId: number) => void;
+  disabledModelGroupsIds?: number[]; // Optional for composition
+  modelDisabledReason?: string;
+  onDisabledModelClick?: () => void;
+};
+
+// BAD: Too many boolean flags
+type BadProps = {
+  isLoading?: boolean;
+  isError?: boolean;
+  isDisabled?: boolean;
+  showIcon?: boolean;
+  // ...
+};
+```
+
+## File & Naming Conventions
+
+- **Directories**: kebab-case (`feature-name/`)
+- **Component files**: kebab-case (`my-component.tsx`)
+- **Component names**: PascalCase (`MyComponent`)
+- **Functions/consts**: camelCase (`myFunction`)
+- **Event handlers**: `handle` prefix (`handleClick`, `handleSubmit`)
+- **Styles**: co-located `.styles.ts` files (`component.styles.ts`)
+- **Tests**: `.test.ts` or `.spec.ts` suffix
+
+## Import Order
+
+Maintain strict import order (no empty lines between groups):
+1. Node natives
+2. React
+3. Other 3rd parties
+4. `@artlist/*` namespace imports
+5. Local aliases (`@ai-toolkit/*`, `@growth/*`)
+6. Relative paths
+
+```typescript
+import { forwardRef, useEffect, useState } from 'react';
+import type { ModelGroupOption } from '@ai-toolkit/backend';
+import { useHasScroll } from '@ai-toolkit/shared-hooks';
+import Tooltip from '@mui/material/Tooltip';
+import { match } from 'ts-pattern';
+import { ChipColor } from '@artlist/design-system';
+import ModelItem from '../model-item/model-item';
+import { ScrollableContainer } from './model-picker.styles';
+```
+
+## Styling with MUI v7
+
+1. **Use `sx` prop** for one-off customizations
+2. **Use `styled()`** for reusable styled components
+3. **Always use theme tokens** - never hardcode colors, spacing, or radii
+4. **Co-locate styles** in `.styles.ts` files
+5. **Type assertions** on styled components for proper typing
+
+```typescript
+// component.styles.ts
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+
+export const ScrollableContainer = styled(Box)(({ theme }) => ({
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+  scrollbarWidth: 'thin',
+  scrollbarColor: `${theme.palette.grey[600]} transparent`,
+  paddingRight: theme.spacing(0.5),
+  
+  [theme.breakpoints.down('sm')]: {
+    paddingRight: 0,
+  },
+})) as typeof Box;
+
+// For custom props, use shouldForwardProp
+export const ModelItemContainer = styled('div', {
+  shouldForwardProp: (prop) => prop !== 'isOddCount',
+})(({ theme, isOddCount }: { theme: Theme; isOddCount: boolean }) => ({
+  // styles...
+})) as unknown as React.ComponentType<
+  React.HTMLAttributes<HTMLDivElement> & { isOddCount: boolean }
+>;
+```
+
+## State Management
+
+1. **`useState`** for simple component state
+2. **`useReducer`** for complex local state logic
+3. **TanStack React Query** for server state (API data)
+4. **Query invalidation** after mutations
+
+### tRPC + React Query Pattern
+
+```typescript
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useTRPC } from '@ai-toolkit/backend';
+
+// In component:
+const trpc = useTRPC();
+
+// Query with options
+const { data, isLoading, error } = useQuery({
+  ...trpc.router.procedure.queryOptions({ param: value }),
+  enabled: !!someCondition,
+});
+
+// Mutation with cache invalidation
+const mutation = useMutation(
+  trpc.router.procedure.mutationOptions({
+    onSuccess: (data, variables) => {
+      const queryKey = trpc.router.otherProcedure.queryKey({ id: variables.id });
+      queryClient.invalidateQueries({ queryKey });
+    },
+  })
+);
+```
+
+## Hook Design
+
+1. **Export pure functions** for testing complex logic separately
+2. **Return discriminated unions** for complex state
+3. **Use early returns** for invalid/loading states
+4. **Maintain stable references** to prevent unnecessary re-renders
+
+```typescript
+// Export pure function for testing
+export function resolveAuthenticatedCta(
+  journey: JourneyConfig,
+  category: MediaCategory,
+  params: AuthenticatedResolutionParams,
+): UsePromptCtaReturn {
+  // Return stable loading state until all data sources are settled
+  if (!isDataSettled) {
+    return {
+      type: PROMPT_GENERATE_STATE_TYPE.CAN_GENERATE,
+      warningCta: null,
+      isLoading: true,
+      isError: false,
+      // ...
+    };
+  }
+  // Rest of logic...
+}
+
+// Hook composes pure function with data fetching
+export function usePromptCta(modelId: number | undefined, category: MediaCategory): UsePromptCtaReturn {
+  const session = useSession();
+  const { journey, isLoading } = useToolkitJourney();
+  // ... other hooks for data
+
+  // Early return for unauthenticated
+  if (!isAuthenticated) {
+    return resolveVisitorCta(journey);
+  }
+
+  return resolveAuthenticatedCta(journey, category, params);
+}
+```
+
+## Testing Standards
+
+1. **Use project test utilities** - `render` from `@artlist/test-utils-react`
+2. **Focus on user behavior** - not implementation details
+3. **Use accessible selectors first** - `getByRole`, `getByLabelText`
+4. **`getByTestId` only as last resort**
+5. **Use `userEvent` over `fireEvent`**
+6. **Mock external dependencies** with `vi.mock()`
+
+```typescript
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render } from '@artlist/test-utils-react';
+
+const mockOnGenerate = vi.fn();
+
+vi.mock('@ai-toolkit/toolkit-state', () => ({
+  usePromptInputFiles: vi.fn(() => []),
+  useModelGroupId: vi.fn(() => null),
+}));
+
+describe('GenerateButton', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls onGenerate when clicked', async () => {
+    const user = userEvent.setup();
+    render(<GenerateButton />);
+
+    await user.click(screen.getByRole('button', { name: /generate/i }));
+
+    expect(mockOnGenerate).toHaveBeenCalled();
+  });
+});
+```
+
+## Code Style
+
+1. **Use early returns** to reduce nesting
+2. **Remove unused imports and variables**
+3. **No `console.log()` or debug code**
+4. **Descriptive variable/function names**
+5. **Minimal comments** - prefer self-documenting code
+6. **Trailing commas** in multiline objects/arrays
+7. **Single quotes** in JS/TS, double quotes in JSON
+
+## Accessibility (WCAG 2.1 AA)
+
+1. **Semantic HTML** - `<button>`, `<nav>`, `<main>`
+2. **All interactive elements keyboard accessible**
+3. **`aria-label`** for icon-only buttons
+4. **`aria-hidden="true"`** for decorative icons
+5. **Focus management** for modals/dialogs
+6. **Prefer MUI components** - they handle a11y requirements
+
+```typescript
+<SquareIconButton
+  variant="primary"
+  onClick={onClick}
+  aria-label="Generate content"
+  disabled={disabled}
+>
+  <GenerateIcon />
+</SquareIconButton>
+
+<ResizeButton
+  aria-label="Resize prompt (double-click to reset)"
+>
+  <ResizeIcon />
+</ResizeButton>
+```
+
+## Error Handling
+
+1. **Error boundaries** at page/feature boundaries
+2. **Graceful degradation** - fallback UI for non-critical features
+3. **User-friendly error messages** - actionable feedback
+4. **Never swallow errors silently**
+
+## Project Structure (NX Monorepo)
+
+```
+apps/
+  artlist-ai-toolkit/    # Next.js app
+libs/
+  ai-toolkit/
+    features/            # Feature libraries (type:ai-toolkit-feature)
+      prompt/
+        src/
+          components/    # UI components
+          hooks/         # Custom hooks
+          constants/     # Constants and types
+          utils/         # Utility functions
+          testing/       # Test utilities
+          index.ts       # Public exports
+    backend/             # tRPC routers (type:ai-toolkit-backend)
+    shared/              # Shared utilities (type:ai-toolkit-shared)
+  infra/                 # Cross-domain shared code (type:infra-shared)
+```
+
+### Dependency Rules
+
+- Features can import from: shared, backend, infra-shared
+- Backend can only import from: infra-shared
+- Cross-domain imports: always use package names (`@artlist/*`), never relative paths
+
+## Anti-Patterns to Avoid
+
+- ❌ `any` type
+- ❌ Class components (except error boundaries)
+- ❌ Hardcoded colors/spacing (use theme tokens)
+- ❌ `className` for MUI styling (use `sx`)
+- ❌ Boolean flag props proliferation
+- ❌ `getByTestId` as first selector choice
+- ❌ Empty `catch` blocks
+- ❌ Disabling ESLint rules without documentation
+- ❌ Relative imports for cross-library dependencies
