@@ -6,6 +6,13 @@ export type GitLabUser = {
   readonly avatar_url?: string;
 };
 
+export type UserOption = {
+  readonly id: number;
+  readonly username: string;
+  readonly name: string;
+  readonly avatarUrl?: string;
+};
+
 export type GitLabProject = {
   readonly id: number;
   readonly name: string;

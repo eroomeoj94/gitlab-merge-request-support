@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Avatar from '@mui/material/Avatar';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Paper from '@mui/material/Paper';
@@ -14,18 +12,13 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import type { ReportRequest } from '@/types/report';
+import type { UserOption } from '@/app/components/user-autocomplete';
+import { UserAutocomplete } from '@/app/components/user-autocomplete';
 
 type ProjectOption = {
   id: number;
   name: string;
   pathWithNamespace: string;
-};
-
-type UserOption = {
-  id: number;
-  username: string;
-  name: string;
-  avatarUrl?: string;
 };
 
 type ReportFormProps = {
@@ -41,14 +34,12 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<ProjectOption[]>([]);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<UserOption[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState(thirtyDaysAgo.toISOString().split('T')[0] ?? '');
   const [dateTo, setDateTo] = useState(today.toISOString().split('T')[0] ?? '');
   const [excludeDrafts, setExcludeDrafts] = useState(true);
   const [projectsLoading, setProjectsLoading] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,34 +78,6 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
     };
   }, [projectSearchQuery]);
 
-  useEffect(() => {
-    if (userSearchQuery.trim().length < 2) {
-      setUserOptions([]);
-      setUsersLoading(false);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      try {
-        setUsersLoading(true);
-        const response = await fetch(`/api/users?search=${encodeURIComponent(userSearchQuery.trim())}`);
-        if (!response.ok) {
-          throw new Error('Failed to search users');
-        }
-        const data = (await response.json()) as { users: UserOption[] };
-        setUserOptions(data.users);
-      } catch (error) {
-        console.error('Error searching users:', error);
-        setUserOptions([]);
-      } finally {
-        setUsersLoading(false);
-      }
-    }, 300);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [userSearchQuery]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -197,70 +160,15 @@ export default function ReportForm({ onSubmit, isLoading }: ReportFormProps) {
             fullWidth
           />
 
-          <Autocomplete
-            multiple
-            options={userOptions}
-            getOptionLabel={(option) => `${option.name} (@${option.username})`}
+          <UserAutocomplete
             value={selectedUsers}
-            onChange={(_, newValue) => setSelectedUsers(newValue)}
-            onInputChange={(_, newInputValue) => setUserSearchQuery(newInputValue)}
-            loading={usersLoading}
-            inputValue={userSearchQuery}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Users (required, select at least one)"
-                placeholder="Type to search users (minimum 2 characters)"
-                error={selectedUsers.length === 0 && userSearchQuery.length > 0}
-                helperText={
-                  selectedUsers.length === 0 && userSearchQuery.length > 0
-                    ? 'Please select at least one user'
-                    : ''
-                }
-              />
-            )}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  {...getTagProps({ index })}
-                  key={option.id}
-                  label={option.name}
-                  avatar={
-                    option.avatarUrl ? (
-                      <Avatar src={option.avatarUrl} alt={option.name} sx={{ width: 24, height: 24 }} />
-                    ) : (
-                      <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
-                        {option.name.charAt(0).toUpperCase()}
-                      </Avatar>
-                    )
-                  }
-                />
-              ))
-            }
-            renderOption={(props, option) => (
-              <Box component="li" {...props} key={option.id}>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: '100%' }}>
-                  {option.avatarUrl ? (
-                    <Avatar src={option.avatarUrl} alt={option.name} sx={{ width: 32, height: 32 }} />
-                  ) : (
-                    <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: 'primary.main' }}>
-                      {option.name.charAt(0).toUpperCase()}
-                    </Avatar>
-                  )}
-                  <Box sx={{ flex: 1 }}>
-                    <Box component="div" sx={{ fontWeight: 'medium' }}>
-                      {option.name}
-                    </Box>
-                    <Box component="div" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-                      @{option.username}
-                    </Box>
-                  </Box>
-                </Stack>
-              </Box>
-            )}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            filterOptions={(x) => x}
-            fullWidth
+            onChange={setSelectedUsers}
+            onInputChange={setUserSearchQuery}
+            label="Users (required, select at least one)"
+            placeholder="Type to search users (minimum 2 characters)"
+            error={selectedUsers.length === 0 && userSearchQuery.length > 0}
+            errorText={selectedUsers.length === 0 && userSearchQuery.length > 0 ? 'Please select at least one user' : undefined}
+            showAvatars={true}
           />
 
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
